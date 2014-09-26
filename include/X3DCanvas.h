@@ -6,6 +6,9 @@
 #include "XAbstractCanvasController.h"
 #include "QtHelper/XQWidget.h"
 #include "QtGui/QMouseEvent"
+#include "QtOpenGL/QGLWidget"
+
+class QPaintEngine;
 
 
 namespace Eks
@@ -14,14 +17,6 @@ class ScreenFrameBuffer;
 class Renderer;
 class FrameBuffer;
 }
-
-#ifdef Q_MOC_RUN
-# define X_ENABLE_GL_RENDERER
-#endif
-
-#ifdef X_ENABLE_GL_RENDERER
-
-#include "QtOpenGL/QGLWidget"
 
 namespace Eks
 {
@@ -78,7 +73,10 @@ class EKS3D_EXPORT GL3DCanvas
 
 public:
   GL3DCanvas(QWidget *parent=0);
+  GL3DCanvas(QGLWidget *share, QWidget *parent);
   ~GL3DCanvas();
+
+  static QGLFormat makeFormat();
 
   X_CANVAS_GENERAL_MOUSEHANDLERS()
 
@@ -94,23 +92,16 @@ Q_SIGNALS:
 public Q_SLOTS:
   void update3D();
 
+protected:
+  void setRenderer(Renderer *r, bool own);
+
 private:
   Renderer *_renderer;
   ScreenFrameBuffer *_buffer;
+  bool _ownsRenderer;
   };
 
 #endif
-
-}
-
-#endif
-
-#ifdef X_ENABLE_DX_RENDERER
-
-class QPaintEngine;
-
-namespace Eks
-{
 
 class EKS3D_EXPORT D3D3DCanvas
     : public QWidget,
@@ -144,17 +135,18 @@ protected:
   void resizeEvent(QResizeEvent* evt) X_OVERRIDE;
   void paintEvent(QPaintEvent*) X_OVERRIDE;
 
+  void setRenderer(Renderer *r, bool own);
+
 protected Q_SLOTS:
   void doInitialise3D();
 
 private:
   Renderer *_renderer;
   ScreenFrameBuffer *_buffer;
+  bool _ownsRenderer;
   };
 
 }
-
-#endif
 
 namespace Eks
 {

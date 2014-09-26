@@ -154,7 +154,7 @@ void GL3DCanvas::doInitialise3D()
 
 #else
 
-QGLFormat makeFormat()
+QGLFormat GL3DCanvas::makeFormat()
   {
   QGLFormat::OpenGLVersionFlags available = QGLFormat::openGLVersionFlags();
 
@@ -206,13 +206,24 @@ GL3DCanvas::GL3DCanvas(QWidget *parent) :
   _renderer = 0;
   }
 
+
+GL3DCanvas::GL3DCanvas(QGLWidget *share, QWidget *parent) :
+  QGLWidget(makeFormat(), parent, share)
+  {
+  _buffer = 0;
+  _renderer = 0;
+  }
+
 GL3DCanvas::~GL3DCanvas()
   {
-  if(_renderer)
+  if(_renderer )
     {
     xAssert(_buffer);
-    Eks::GLRenderer::destroyGLRenderer(_renderer, _buffer, ALLOC);
     ALLOC->destroy(_buffer);
+    if (_ownsRenderer)
+      {
+      Eks::GLRenderer::destroyGLRenderer(_renderer, ALLOC);
+      }
     }
   _buffer = 0;
   }
@@ -224,7 +235,6 @@ void GL3DCanvas::paintGL()
 
 void GL3DCanvas::initializeGL()
   {
-  _buffer = ALLOC->create<ScreenFrameBuffer>();
 
   bool es =
 #ifdef X_GLES
@@ -233,7 +243,13 @@ void GL3DCanvas::initializeGL()
     false
 #endif
     ;
-  _renderer = GLRenderer::createGLRenderer(_buffer, es, ALLOC);
+
+  if (!_renderer)
+    {
+    setRenderer(GLRenderer::createGLRenderer(es, ALLOC), true);
+    }
+
+  _buffer = ALLOC->create<ScreenFrameBuffer>(_renderer);
   Q_EMIT initialise3D(_renderer);
   }
 
@@ -249,13 +265,20 @@ void GL3DCanvas::update3D()
   update();
   }
 
+void GL3DCanvas::setRenderer(Renderer *r, bool own)
+  {
+  _renderer = r;
+  _ownsRenderer = own;
+  }
+
 #endif
 
-#ifdef X_ENABLE_DX_RENDERER
 
 D3D3DCanvas::D3D3DCanvas(QWidget* parent, Renderer **r)
     : QWidget(parent)
   {
+  (void)r;
+#ifdef X_ENABLE_DX_RENDERER
   setAttribute(Qt::WA_PaintOnScreen, true);
   setAttribute(Qt::WA_NativeWindow, true);
 
@@ -267,13 +290,16 @@ D3D3DCanvas::D3D3DCanvas(QWidget* parent, Renderer **r)
   _renderer = renderer = Eks::D3DRenderer::createD3DRenderer((void*)handle, _buffer, ALLOC);
 
   QTimer::singleShot(0, Qt::CoarseTimer, this, SLOT(doInitialise3D()));
+#endif
   }
 
 D3D3DCanvas::~D3D3DCanvas()
   {
+#ifdef X_ENABLE_DX_RENDERER
   Eks::D3DRenderer::destroyD3DRenderer(_renderer, _buffer, ALLOC);
   ALLOC->destroy(_buffer);
   _buffer = 0;
+#endif
   }
 
 void D3D3DCanvas::update3D()
@@ -300,8 +326,6 @@ void D3D3DCanvas::doInitialise3D()
   {
   emit initialise3D(_renderer);
   }
-
-#endif
 
 QWidget* Canvas3D::createBest(QWidget* parent, AbstractCanvas **canvasOut)
   {
