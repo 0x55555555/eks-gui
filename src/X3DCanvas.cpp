@@ -1,8 +1,8 @@
 #include "X3DCanvas.h"
 #include "XCore.h"
 #include "Utilities/XOptional.h"
-#include "XGLRenderer.h"
-#include "XD3DRenderer.h"
+#include "GL/XGLRenderer.h"
+#include "D3D/XD3DRenderer.h"
 #include "XFramebuffer.h"
 #include <QtOpenGL>
 
@@ -93,7 +93,7 @@ private:
 #define ALLOC Eks::Core::defaultAllocator()
 
 #ifdef X_ENABLE_GL_RENDERER
-
+  
 #ifdef X_GL_EXTERNAL_CONTEXT
 
 GL3DCanvas::GL3DCanvas(QWidget *parent) :
